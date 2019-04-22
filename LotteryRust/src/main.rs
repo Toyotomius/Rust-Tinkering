@@ -1,44 +1,44 @@
-use serde::{Deserialize, Serialize};
-use std::io::prelude::*;
-use std::fs::File;
-use std::collections::HashMap;
+mod lotto649;
+mod lottoexample;
 
-#[derive(Serialize, Deserialize)]
-#[derive(Debug)]
-struct Lotto {
-	Lotto649: Vec<LottoData>
-}
-#[derive(Serialize, Deserialize)]
-#[derive(Debug)]
-struct LottoData {
-	Date: String,
-	Numbers: Vec<i32>
-}
-
+use lotto649::lotto649;
+use lottoexample::lottoexample;
+use std::thread;
+use std::time::Instant;
 
 fn main() {
-	let json_loc = "E:\\VS Solutions\\Rust Solutions\\LotteryRust\\src\\Lotto649.json";
+	let start = Instant::now();
+
+	// Create vector to hold thread children that are spawned
+	let mut children = vec![];
 	
-	let mut f = File::open(json_loc).expect("File not found");
-
-	let mut lottery_json = String::new();
-	f.read_to_string(&mut lottery_json).expect("Something went wrong");
-
-	let lotto: Lotto = serde_json::from_str(&lottery_json).unwrap();
-
-	let mut v = Vec::new();
-
-	for i in 0..lotto.Lotto649.len() {
-		v.push(&lotto.Lotto649[i].Numbers)
+	
+	for i in 0..30 {
+		// Spin up a new thread for each index of loop. Pass index to function for tracking.
+		children.push(thread::spawn(move || {
+			lotto649(&i);
+		}));
+		children.push(thread::spawn(move || {
+			lottoexample(&i);
+		}));
 	}
 
-	let flatten_lotto: Vec<i32> = v.iter().flat_map(|array| array.iter()).cloned().collect();
-
-	let mut frequency: HashMap<i32, u32> = HashMap::new();
-	for itm in flatten_lotto{
-		*frequency.entry(itm).or_insert(0) += 1;
+	for child in children {
+		let _ = child.join();
 	}
 
-	println!("{:?}", frequency);
+	println!(
+		"(non-Handles) Total time elapsed: {} ms",
+		start.elapsed().as_millis()
+	);
 
+	// 	let handles = (0..30)
+	// 	.into_iter()
+	// 	.map(|i| {
+	// 		println!("Submitted {}", i);
+	// 		thread::spawn(move || lotto649(i))
+	// 	})
+	// 	.collect::<Vec<_>>();
+
+	// handles.into_iter().for_each(|h| h.join().unwrap());
 }
